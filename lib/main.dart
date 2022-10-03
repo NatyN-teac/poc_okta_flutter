@@ -38,6 +38,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<Token?> getToken({required String email, required String password}) async {
     try {
       final result = await methodChannel.invokeMethod('signin', {'email': email, 'password': password});
+      // print("resul: $result");
       if (result != null) {
         return Token.fromJson(jsonDecode(result.toString()));
       }
@@ -171,10 +172,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
               const SizedBox(
-                height: 80,
+                height: 30,
               ),
               accessToken.isNotEmpty
-                  ? SizedBox(height: 100, child: SingleChildScrollView(child: Text("Access Token: $accessToken")))
+                  ? SizedBox(height: 300, child: SingleChildScrollView(child: Text("Access Token: $accessToken")))
                   : Container()
             ],
           ),
