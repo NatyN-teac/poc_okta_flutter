@@ -29,6 +29,11 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
   final methodChannel = const MethodChannel('com.okta_poc');
   final TextEditingController _emailController = TextEditingController(text: "gguess@ffo.kr");
   final TextEditingController _passController = TextEditingController(text: "Nat123456");
@@ -37,8 +42,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<Token?> getToken({required String email, required String password}) async {
     try {
-      final result = await methodChannel.invokeMethod('signin', {'email': email, 'password': password});
-      // print("resul: $result");
+      final argumentMap = {
+        'email': email,
+        'password': password,
+        'issuer': "https://dev-08901952.okta.com/oauth2/default",
+        'clientId': "0oa6n8dw1yIMgQ5RE5d7",
+        "redirectUri": "com.embeddedauth://callback"
+      };
+      final result = await methodChannel.invokeMethod('signin', argumentMap);
+
       if (result != null) {
         return Token.fromJson(jsonDecode(result.toString()));
       }

@@ -20,7 +20,10 @@ import OktaIdx
           case "signin":
               let arg = call.arguments as? Dictionary<String,String>
               guard let argment = arg else {return }
-              self?.signIn(username: argment["email"]!, password: argment["password"]!, completion: { resul in
+
+              let argumentDict = ["issuer": arg?["issuer"] ?? "","clientId": arg?["clientId"] ?? "","redirectUri": arg?["redirectUri"] ?? ""]
+              
+              self?.signIn(username: argment["email"]!, password: argment["password"]!, startingData: argumentDict,completion: { resul in
                  switch resul {
                  case .success(let token):
                      let finalResult: String = """
@@ -40,13 +43,9 @@ import OktaIdx
                      result(finalResult)
                  case .failure(let error):
                      print("final error: \(error)")
+                     result(FlutterMethodNotImplemented)
                  }
              })
-//              self?.fetchLimit = call.arguments as! Int
-//              self?.flutterResult = result
-//              self?.getPhotos()
-//          case "fetchImage":
-//              self?.fetchImage(args: call.arguments as? Dictionary<String, Any>, result: result)
           default:
               result(FlutterMethodNotImplemented)
           }
@@ -60,36 +59,58 @@ import OktaIdx
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
     
-    func signIn(username: String, password: String,completion: @escaping (Result<Token, InteractionCodeFlowError>) -> Void){
+    func signIn(username: String, password: String,startingData: Dictionary<String, String>, completion: @escaping (Result<Token, InteractionCodeFlowError>) -> Void){
         let flow =  InteractionCodeFlow(
-            issuer: URL(string: "https://dev-08901952.okta.com/oauth2/default")!,
-            clientId: "0oa6n8dw1yIMgQ5RE5d7",
+            issuer: URL(string: startingData["issuer"]!)!,
+            clientId: startingData["clientId"]! ,
             scopes: "openid profile offline_access",
-            redirectUri: URL(string: "com.embeddedauth://callback")!)
+            redirectUri: URL(string: startingData["redirectUri"]!)!)
+        
           flow.start { result in
             switch result {
             case .success(let response):
-                print("response : \(response)")
-                guard let remediation = response.remediations[.identify],
-                      let usernameField = remediation["identifier"],
-                      let passwordField = remediation["credentials.passcode"]
-                else{
-                    return
-                }
-                usernameField.value = username
-                passwordField.value = password
-                 return remediation.proceed(completion: {res in
-                    switch res {
-                    case .success(let rsp):
-                        guard rsp.isLoginSuccessful else {return}
-                        rsp.exchangeCode(){ tokn in
-                            completion(tokn)
-                        }
-                    case .failure(let error):
-                        print("error happened during trying to implement")
+                
+                response.cancel { re in
+                    switch re {
+                    case .success(let myCancelResponse):
+                        print("result is done: \(myCancelResponse.isLoginSuccessful)")
+                        
+                        print("response : \(response.isLoginSuccessful)")
+                        if let remediation = myCancelResponse.remediations[.identify]{
+                                remediation["identifier"]?.value = username
+                                remediation["credentials.passcode"]?.value = password
+                            
+                            return remediation.proceed(completion: {res in
+                               switch res {
+                               case .success(let rsp):
+                                   guard rsp.isLoginSuccessful else {return}
+                                   rsp.exchangeCode(){ tokn in
+                                       completion(tokn)
+                                   }
+                               case .failure(let error):
+                                   print("error happened during trying to implement \(error)")
+                               }
+                               
+                           } )
+                            
                     }
-                    
-                } )
+                    case .failure(let err):
+                        print("error is \(err)")
+                    }
+                }
+                
+                print("response : \(response.isLoginSuccessful)")
+                
+//              else{
+//                      print("identifier : what happened, \(response.remediations["identifier"]) and \(response.remediations["credentials.passcode"])")
+////                      print("passcode : \(remediation["credentials.passcode"])")
+//
+//                    return
+//                }
+//                print("result after guard : \(remediation)")
+//                usernameField.value = username
+//                passwordField.value = password
+                
             case .failure(let error):
                 print("Error : \(error)")
             }
